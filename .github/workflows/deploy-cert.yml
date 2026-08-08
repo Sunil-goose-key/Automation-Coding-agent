@@ -22,6 +22,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: DEBUG - raw sts assume-role-with-web-identity
+        run: |
+          TOKEN=$(curl -sH "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).value')
+          aws sts assume-role-with-web-identity \
+            --role-arn "$AWS_DEPLOY_ROLE_ARN" \
+            --role-session-name debugsession \
+            --web-identity-token "$TOKEN" \
+            --region "$AWS_REGION" || true
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
