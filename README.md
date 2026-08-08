@@ -2,4 +2,4 @@
 
 Target repository for the automated Jira-to-PR coding agent, deployed to Cert via GitHub Actions.
 
-Retrigger: testing corrected OIDC sub wildcard.
+Retrigger: testing ECR permission fix.
