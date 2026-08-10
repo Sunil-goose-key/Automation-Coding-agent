@@ -84,22 +84,31 @@ jobs:
           ENV_NAME: Cert
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          curl -sf -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST -H "Content-Type: application/json" \
-            "$JIRA_BASE_URL/rest/api/3/issue" -d "$(node -e '
-              const body = {
-                fields: {
-                  project: { key: "SCRUM" },
-                  issuetype: { name: "Bug" },
-                  summary: `[${process.env.ENV_NAME} QA] Automated test failure on commit ${process.env.GITHUB_SHA.slice(0, 7)}`,
-                  description: {
-                    type: "doc", version: 1,
-                    content: [{ type: "paragraph", content: [{ type: "text",
-                      text: `QA tests failed against ${process.env.ENV_NAME} after deploying commit ${process.env.GITHUB_SHA}. Failed run: ${process.env.RUN_URL}` }] }],
-                  },
+          PAYLOAD=$(node -e '
+            const body = {
+              fields: {
+                project: { key: "SCRUM" },
+                issuetype: { name: "Bug" },
+                summary: `[${process.env.ENV_NAME} QA] Automated test failure on commit ${process.env.GITHUB_SHA.slice(0, 7)}`,
+                description: {
+                  type: "doc", version: 1,
+                  content: [{ type: "paragraph", content: [{ type: "text",
+                    text: `QA tests failed against ${process.env.ENV_NAME} after deploying commit ${process.env.GITHUB_SHA}. Failed run: ${process.env.RUN_URL}` }] }],
                 },
-              };
-              console.log(JSON.stringify(body));
-            ')"
+              },
+            };
+            console.log(JSON.stringify(body));
+          ')
+          HTTP_STATUS=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue" -d "$PAYLOAD" \
+            -o response.json -w "%{http_code}")
+          echo "Jira responded with HTTP $HTTP_STATUS:"
+          cat response.json
+          echo ""
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::error::Failed to file Jira bug (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
 
       - name: Promote image to UAT (retag within the same ECR repo)
         env:
@@ -142,19 +151,28 @@ jobs:
           ENV_NAME: UAT
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          curl -sf -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST -H "Content-Type: application/json" \
-            "$JIRA_BASE_URL/rest/api/3/issue" -d "$(node -e '
-              const body = {
-                fields: {
-                  project: { key: "SCRUM" },
-                  issuetype: { name: "Bug" },
-                  summary: `[${process.env.ENV_NAME} QA] Automated test failure on commit ${process.env.GITHUB_SHA.slice(0, 7)}`,
-                  description: {
-                    type: "doc", version: 1,
-                    content: [{ type: "paragraph", content: [{ type: "text",
-                      text: `QA tests failed against ${process.env.ENV_NAME} after deploying commit ${process.env.GITHUB_SHA}. Failed run: ${process.env.RUN_URL}` }] }],
-                  },
+          PAYLOAD=$(node -e '
+            const body = {
+              fields: {
+                project: { key: "SCRUM" },
+                issuetype: { name: "Bug" },
+                summary: `[${process.env.ENV_NAME} QA] Automated test failure on commit ${process.env.GITHUB_SHA.slice(0, 7)}`,
+                description: {
+                  type: "doc", version: 1,
+                  content: [{ type: "paragraph", content: [{ type: "text",
+                    text: `QA tests failed against ${process.env.ENV_NAME} after deploying commit ${process.env.GITHUB_SHA}. Failed run: ${process.env.RUN_URL}` }] }],
                 },
-              };
-              console.log(JSON.stringify(body));
-            ')"
+              },
+            };
+            console.log(JSON.stringify(body));
+          ')
+          HTTP_STATUS=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST -H "Content-Type: application/json" \
+            "$JIRA_BASE_URL/rest/api/3/issue" -d "$PAYLOAD" \
+            -o response.json -w "%{http_code}")
+          echo "Jira responded with HTTP $HTTP_STATUS:"
+          cat response.json
+          echo ""
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::error::Failed to file Jira bug (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
