@@ -16,6 +16,10 @@ env:
   ECS_CLUSTER: CertCluster
   ECS_SERVICE: CertService
   CERT_URL: http://Automa-CertS-4zBWpyvurCt1-324493237.ap-south-1.elb.amazonaws.com
+  UAT_ECS_CLUSTER: UatCluster
+  UAT_ECS_SERVICE: UatService
+  UAT_IMAGE_TAG: uat-latest
+  UAT_URL: http://Automa-UatSe-7kz444cp7VG3-1472525990.ap-south-1.elb.amazonaws.com
 
 jobs:
   deploy:
@@ -68,4 +72,35 @@ jobs:
       - name: Run QA tests against Cert
         env:
           QA_TARGET_URL: ${{ env.CERT_URL }}
+        run: npm run test:qa
+
+      - name: Promote image to UAT (retag within the same ECR repo)
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          MANIFEST=$(aws ecr batch-get-image \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            --query 'images[0].imageManifest' --output text)
+          aws ecr put-image \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-tag "$UAT_IMAGE_TAG" \
+            --image-manifest "$MANIFEST"
+
+      - name: Deploy to UAT (force new ECS deployment)
+        run: |
+          aws ecs update-service \
+            --cluster "$UAT_ECS_CLUSTER" \
+            --service "$UAT_ECS_SERVICE" \
+            --force-new-deployment
+
+      - name: Wait for UAT service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$UAT_ECS_CLUSTER" \
+            --services "$UAT_ECS_SERVICE"
+
+      - name: Run QA tests against UAT
+        env:
+          QA_TARGET_URL: ${{ env.UAT_URL }}
         run: npm run test:qa
