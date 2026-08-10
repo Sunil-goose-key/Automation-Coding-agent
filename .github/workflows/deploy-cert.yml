@@ -15,6 +15,7 @@ env:
   ECR_REPOSITORY: automation-coding-agent-cert
   ECS_CLUSTER: CertCluster
   ECS_SERVICE: CertService
+  CERT_URL: http://Automa-CertS-4zBWpyvurCt1-324493237.ap-south-1.elb.amazonaws.com
 
 jobs:
   deploy:
@@ -50,3 +51,21 @@ jobs:
             --cluster "$ECS_CLUSTER" \
             --service "$ECS_SERVICE" \
             --force-new-deployment
+
+      - name: Wait for Cert service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run QA tests against Cert
+        env:
+          QA_TARGET_URL: ${{ env.CERT_URL }}
+        run: npm run test:qa
