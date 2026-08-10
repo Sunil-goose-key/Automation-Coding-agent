@@ -14,8 +14,7 @@ test("GET /health returns 200 ok", async () => {
   const res = await fetch(`${baseUrl}/health`);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
-  // DELIBERATE FAILURE (attempt 2) — re-verifying bug-filing after fixing the secret values.
-  assert.strictEqual(body.status, "definitely-not-ok");
+  assert.strictEqual(body.status, "ok");
 });
 
 test("POST /login succeeds with valid credentials", async () => {

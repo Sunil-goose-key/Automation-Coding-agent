@@ -84,14 +84,6 @@ jobs:
           ENV_NAME: Cert
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          echo "DEBUG: JIRA_BASE_URL length=${#JIRA_BASE_URL} lastchar='${JIRA_BASE_URL: -1}'"
-          echo "DEBUG: JIRA_EMAIL length=${#JIRA_EMAIL} lastchar='${JIRA_EMAIL: -1}'"
-          echo "DEBUG: JIRA_API_TOKEN length=${#JIRA_API_TOKEN} lastchar='${JIRA_API_TOKEN: -1}'"
-          echo "DEBUG: whoami check:"
-          curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/3/myself" -w "\nHTTP: %{http_code}\n"
-          echo "DEBUG: project accessibility check:"
-          curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/3/project/SCRUM" -w "\nHTTP: %{http_code}\n"
-
           PAYLOAD=$(node -e '
             const body = {
               fields: {
