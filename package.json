@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "test:qa": "node --test test/qa/*.test.js"
   },
   "dependencies": {
     "express": "^4.19.2"
