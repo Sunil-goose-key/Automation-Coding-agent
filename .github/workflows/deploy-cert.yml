@@ -76,7 +76,7 @@ jobs:
         run: npm run test:qa
 
       - name: File Jira bug (Cert QA failure)
-        if: steps.qa-cert.outcome == 'failure'
+        if: failure() && steps.qa-cert.outcome == 'failure'
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
@@ -134,7 +134,7 @@ jobs:
         run: npm run test:qa
 
       - name: File Jira bug (UAT QA failure)
-        if: steps.qa-uat.outcome == 'failure'
+        if: failure() && steps.qa-uat.outcome == 'failure'
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
