@@ -48,3 +48,15 @@ test("POST /login rejects a missing username", async () => {
   });
   assert.strictEqual(res.status, 400);
 });
+
+test("GET /login returns HTML login page", async () => {
+  const res = await fetch(`${baseUrl}/login`);
+  assert.strictEqual(res.status, 200);
+  const contentType = res.headers.get("content-type");
+  assert.ok(contentType && contentType.includes("html"), "Content-Type should be HTML");
+  const body = await res.text();
+  assert.ok(body.includes("<form"), "Response should contain a login form");
+  assert.ok(body.includes('type="text"') || body.includes("username"), "Form should have username input");
+  assert.ok(body.includes('type="password"'), "Form should have password input");
+  assert.ok(body.includes('type="submit"') || body.includes("<button"), "Form should have submit button");
+});
