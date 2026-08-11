@@ -5,9 +5,13 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test test/*.test.js",
-    "test:qa": "node --test test/qa/*.test.js"
+    "test:qa": "node --test test/qa/*.test.js",
+    "qa:screenshot": "node scripts/qaScreenshot.js"
   },
   "dependencies": {
     "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
   }
 }

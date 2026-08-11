@@ -69,11 +69,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Run QA tests against Cert
         id: qa-cert
         env:
           QA_TARGET_URL: ${{ env.CERT_URL }}
         run: npm run test:qa
+
+      - name: Capture Cert login screenshot
+        if: always()
+        continue-on-error: true
+        run: npm run qa:screenshot -- --url "$CERT_URL" --out screenshots/cert-login.png
 
       - name: File Jira bug (Cert QA failure)
         if: failure() && steps.qa-cert.outcome == 'failure'
@@ -142,6 +150,11 @@ jobs:
           QA_TARGET_URL: ${{ env.UAT_URL }}
         run: npm run test:qa
 
+      - name: Capture UAT login screenshot
+        if: always()
+        continue-on-error: true
+        run: npm run qa:screenshot -- --url "$UAT_URL" --out screenshots/uat-login.png
+
       - name: File Jira bug (UAT QA failure)
         if: failure() && steps.qa-uat.outcome == 'failure'
         env:
@@ -176,3 +189,11 @@ jobs:
             echo "::error::Failed to file Jira bug (HTTP $HTTP_STATUS)"
             exit 1
           fi
+
+      - name: Upload login screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: login-screenshots
+          path: screenshots/
+          if-no-files-found: warn
