@@ -8,6 +8,10 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+app.get("/version", (req, res) => {
+  res.status(200).json({ version: "1.0.0" });
+});
+
 app.get("/login", (req, res) => {
   res.status(200).type("html").send(`
 <!DOCTYPE html>

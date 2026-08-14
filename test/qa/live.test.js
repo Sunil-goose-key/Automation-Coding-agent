@@ -60,3 +60,10 @@ test("GET /login returns HTML login page", async () => {
   assert.ok(body.includes('type="password"'), "Form should have password input");
   assert.ok(body.includes('type="submit"') || body.includes("<button"), "Form should have submit button");
 });
+
+test("GET /version returns version 1.0.0", async () => {
+  const res = await fetch(`${baseUrl}/version`);
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.version, "1.0.0");
+});
