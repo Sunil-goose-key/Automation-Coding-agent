@@ -20,12 +20,26 @@ env:
   UAT_ECS_SERVICE: UatService
   UAT_IMAGE_TAG: uat-latest
   UAT_URL: http://Automa-UatSe-7kz444cp7VG3-1472525990.ap-south-1.elb.amazonaws.com
+  STATUS_API_URL: https://2ozhrofq4j.execute-api.ap-south-1.amazonaws.com
+  STATUS_API_TOKEN: ARz3tNkVGJHFDzkQU7a0diFUJXxbnPDS
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve Jira issue key from commit message
+        id: resolve-issue
+        run: |
+          SUBJECT=$(git log -1 --pretty=%s)
+          ISSUE_KEY=$(echo "$SUBJECT" | grep -oE '^[A-Z]+-[0-9]+' || true)
+          echo "issue_key=$ISSUE_KEY" >> "$GITHUB_OUTPUT"
+          if [ -n "$ISSUE_KEY" ]; then
+            echo "Resolved issue key: $ISSUE_KEY"
+          else
+            echo "No issue key found in commit subject — dashboard reporting will be skipped"
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -49,6 +63,10 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
 
+      - name: "Report stage: Cert deploy in progress"
+        if: success() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage cert_deploy --status in_progress
+
       - name: Deploy to Cert (force new ECS deployment)
         run: |
           aws ecs update-service \
@@ -62,6 +80,14 @@ jobs:
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_SERVICE"
 
+      - name: "Report stage: Cert deploy succeeded"
+        if: success() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage cert_deploy --status success
+
+      - name: "Report stage: Cert deploy failed"
+        if: failure() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage cert_deploy --status failure --details "Cert deploy failed — see workflow run for details"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -72,11 +98,19 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: "Report stage: Cert testing in progress"
+        if: success() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage cert_testing --status in_progress
+
       - name: Run QA tests against Cert
         id: qa-cert
         env:
           QA_TARGET_URL: ${{ env.CERT_URL }}
         run: npm run test:qa
+
+      - name: "Report stage: Cert testing result"
+        if: always() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage cert_testing --status ${{ steps.qa-cert.outcome == 'success' && 'success' || 'failure' }}
 
       - name: Capture Cert login screenshot
         if: always()
@@ -118,6 +152,10 @@ jobs:
             exit 1
           fi
 
+      - name: "Report stage: UAT deploy in progress"
+        if: success() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage uat_deploy --status in_progress
+
       - name: Promote image to UAT (retag within the same ECR repo)
         env:
           IMAGE_TAG: ${{ github.sha }}
@@ -144,11 +182,27 @@ jobs:
             --cluster "$UAT_ECS_CLUSTER" \
             --services "$UAT_ECS_SERVICE"
 
+      - name: "Report stage: UAT deploy succeeded"
+        if: success() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage uat_deploy --status success
+
+      - name: "Report stage: UAT deploy failed"
+        if: failure() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage uat_deploy --status failure --details "UAT deploy failed — see workflow run for details"
+
+      - name: "Report stage: UAT testing in progress"
+        if: success() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage uat_testing --status in_progress
+
       - name: Run QA tests against UAT
         id: qa-uat
         env:
           QA_TARGET_URL: ${{ env.UAT_URL }}
         run: npm run test:qa
+
+      - name: "Report stage: UAT testing result"
+        if: always() && steps.resolve-issue.outputs.issue_key != ''
+        run: node scripts/reportStage.js --issue "${{ steps.resolve-issue.outputs.issue_key }}" --stage uat_testing --status ${{ steps.qa-uat.outcome == 'success' && 'success' || 'failure' }}
 
       - name: Capture UAT login screenshot
         if: always()
